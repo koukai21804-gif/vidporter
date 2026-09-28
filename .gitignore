@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# 测试与工具
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# 敏感文件：cookie 含登录凭证，严禁提交
+*cookies*.txt
+cookies/
+*.qr.png
+
+# 下载产物
+downloads/
+subs/
+subs_failures.txt
+*.state.json
+*.part
