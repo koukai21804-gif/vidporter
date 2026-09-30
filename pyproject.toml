@@ -57,9 +57,9 @@ build = ["pyinstaller>=6.0"]
 vidporter = "vidporter.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/yourname/vidporter"
-Documentation = "https://github.com/yourname/vidporter#readme"
-Changelog = "https://github.com/yourname/vidporter/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/koukai21804-gif/vidporter"
+Documentation = "https://github.com/koukai21804-gif/vidporter#readme"
+Changelog = "https://github.com/koukai21804-gif/vidporter/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -1,10 +1,19 @@
+<div align="center">
+
 # vidporter · 视频搬运工
+
+**English** | [简体中文](README.md)
 
 **统一的多平台视频提取工具** —— 一个程序，覆盖 B站 / 抖音 / 快手 / 小红书 / 微信视频号，以及 yt-dlp 支持的 1800+ 站点。
 
-[![CI](https://github.com/yourname/vidporter/actions/workflows/ci.yml/badge.svg)](https://github.com/yourname/vidporter/actions/workflows/ci.yml)
+[![CI](https://github.com/koukai21804-gif/vidporter/actions/workflows/ci.yml/badge.svg)](https://github.com/koukai21804-gif/vidporter/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
+[![Release](https://img.shields.io/github/v/release/koukai21804-gif/vidporter)](https://github.com/koukai21804-gif/vidporter/releases)
+
+命令行 · 网页图形界面 · 免安装单文件 exe
+
+</div>
 
 ---
 
@@ -14,6 +23,7 @@
 - **多形态内容**：视频、无水印短视频、图集、音频（`--audio-only`）、字幕
 - **字幕工作流**：B站 AI 字幕批量抓取（断点续传、限流退避）+ SRT 转 Markdown 逐字稿
 - **Cookie 全家桶**：B站扫码登录、从 Edge/Chrome 经 CDP 导出（绕过 app-bound 加密）
+- **图形界面**：`vidporter ui` 网页控制台，或免 Python 环境的单文件 exe
 - **批处理**：URL 列表驱动、状态文件断点续跑、失败清单落盘
 - **可扩展架构**：实现一个 `BaseExtractor` 即可接入新平台
 
@@ -44,7 +54,7 @@ pipx install vidporter
 pip install vidporter
 
 # 开发版
-git clone https://github.com/yourname/vidporter.git
+git clone https://github.com/koukai21804-gif/vidporter.git
 cd vidporter
 pip install -e ".[dev]"
 ```
@@ -145,7 +155,7 @@ channels_tool_path = "D:/tools/res-downloader/res-downloader.exe"
 ## 架构
 
 ```
-CLI (typer + rich)
+CLI (typer + rich) / Web 控制台 (http.server + 单文件 HTML)
  └─ Engine（编排：分发 → 解析 → 下载 → 失败回退）
      ├─ Registry（URL → 平台适配器）
      │    ├─ BilibiliExtractor ──┐

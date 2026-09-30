@@ -6,7 +6,7 @@
 ## 开发环境
 
 ```bash
-git clone https://github.com/yourname/vidporter.git
+git clone https://github.com/koukai21804-gif/vidporter.git
 cd vidporter
 pip install -e ".[dev]"
 ```
