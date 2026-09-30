@@ -2,8 +2,6 @@
 __pycache__/
 *.py[cod]
 *.egg-info/
-build/
-dist/
 .venv/
 venv/
 
@@ -13,18 +11,19 @@ venv/
 .coverage
 htmlcov/
 
-# 敏感文件：cookie 含登录凭证，严禁提交
+# 敏感文件：cookie 含登录凭证，严禁提交（注意：仅匹配文件与根目录，
+# 不可写成无锚定的 cookies/，否则会误伤 src/vidporter/cookies/ 源码包）
 *cookies*.txt
-cookies/
+/cookies/
 *.qr.png
 
-# 下载产物
-downloads/
-subs/
+# 下载产物（锚定到仓库根，避免误伤源码目录）
+/downloads/
+/subs/
 subs_failures.txt
 *.state.json
 *.part
 
 # PyInstaller 产物
-build/
-dist/
+/build/
+/dist/
