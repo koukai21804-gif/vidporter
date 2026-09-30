@@ -41,6 +41,7 @@ dependencies = [
     "typer>=0.12",
     "rich>=13.0",
     "segno>=1.6",
+    "tomli>=2.0; python_version < '3.11'",
 ]
 
 [project.optional-dependencies]

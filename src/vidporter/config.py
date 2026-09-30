@@ -16,8 +16,11 @@ from pathlib import Path
 
 try:
     import tomllib
-except ImportError:  # pragma: no cover - Python 3.10
-    tomllib = None  # type: ignore[assignment]
+except ImportError:  # Python < 3.11
+    try:
+        import tomli as tomllib  # type: ignore[no-redef]
+    except ImportError:  # pragma: no cover - 未安装 tomli 时降级为忽略配置文件
+        tomllib = None  # type: ignore[assignment]
 
 
 def user_config_dir() -> Path:

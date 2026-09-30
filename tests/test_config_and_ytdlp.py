@@ -138,3 +138,14 @@ def test_batch_state_roundtrip(tmp_path):
     state = tmp_path / "list.txt.state.json"
     state.write_text(json.dumps(["https://a.com/1", "https://a.com/2"]))
     assert json.loads(state.read_text()) == ["https://a.com/1", "https://a.com/2"]
+
+
+def test_config_load_without_tomllib(tmp_path, monkeypatch):
+    """既无 tomllib 也无 tomli 时（罕见），应静默使用默认配置而不是崩溃。"""
+    from vidporter import config as config_mod
+
+    cfg_file = tmp_path / "vidporter.toml"
+    cfg_file.write_text("[vidporter]\nquality = 1080\n", encoding="utf-8")
+    monkeypatch.setattr(config_mod, "tomllib", None)
+    cfg = config_mod.Config.load(cfg_file)
+    assert cfg.quality is None
