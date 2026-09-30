@@ -70,7 +70,26 @@ vidporter download <url> --out D:/myvideos     # 指定输出目录
 # 只看信息不下载
 vidporter info <url>
 vidporter info <url> --json
+
+# 启动本地网页控制台（浏览器图形界面）
+vidporter ui
 ```
+
+### 图形界面（网页控制台 / 免安装 exe）
+
+不想敲命令？两种方式：
+
+```bash
+# 方式一：任意已安装环境直接启动，自动打开浏览器
+vidporter ui [--port 8765] [--no-browser]
+
+# 方式二：PyInstaller 打包的单文件 exe，双击即用（无需 Python 环境）
+pyinstaller vidporter.spec --noconfirm     # 产出 dist/vidporter-gui.exe（约 20MB）
+```
+
+网页控制台功能：粘贴链接批量下载（实时进度条与日志）、解析预览、
+B站扫码登录（二维码直接显示在页面上）、SRT 转 Markdown 逐字稿。
+服务器只监听 `127.0.0.1`，不对外暴露端口。
 
 ### 微信视频号
 

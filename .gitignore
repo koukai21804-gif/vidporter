@@ -24,3 +24,7 @@ subs/
 subs_failures.txt
 *.state.json
 *.part
+
+# PyInstaller 产物
+build/
+dist/

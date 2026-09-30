@@ -305,6 +305,21 @@ def cookies_export(
     console.print(f"[green]✓[/green] {count} 条 cookie → {output}")
 
 
+# -- ui ---------------------------------------------------------------------
+
+
+@app.command()
+def ui(
+    host: str = typer.Option("127.0.0.1", "--host", help="监听地址"),
+    port: int | None = typer.Option(None, "--port", help="端口（默认自动选择空闲端口）"),
+    no_browser: bool = typer.Option(False, "--no-browser", help="不自动打开浏览器"),
+) -> None:
+    """启动本地网页控制台（浏览器操作下载 / 扫码登录 / 字幕转换）。"""
+    from vidporter.web.server import serve
+
+    serve(host=host, port=port, open_browser=not no_browser)
+
+
 # -- channels ---------------------------------------------------------------
 
 

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vidporter · 视频搬运工</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #21262d; --text: #e6edf3;
+    --muted: #8b949e; --accent: #2f81f7; --ok: #3fb950; --warn: #d29922;
+    --err: #f85149; --mono: ui-monospace, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.6 system-ui, "Segoe UI", "Microsoft YaHei", sans-serif;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 60px; }
+  header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 20px; }
+  header h1 { font-size: 20px; margin: 0; }
+  header .ver { color: var(--muted); font-size: 12px; }
+  header .env { margin-left: auto; color: var(--muted); font-size: 12px; }
+  header .env b.bad { color: var(--err); }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px; margin-bottom: 16px;
+  }
+  .card h2 { font-size: 14px; margin: 0 0 12px; color: var(--muted); font-weight: 600; }
+  textarea, input[type=text] {
+    width: 100%; background: #0d1117; color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px 10px; font: 13px/1.5 var(--mono);
+  }
+  textarea { min-height: 88px; resize: vertical; }
+  input[type=text]:focus, textarea:focus { outline: 1px solid var(--accent); }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 10px; }
+  .row label { display: flex; gap: 6px; align-items: center; color: var(--muted); font-size: 13px; }
+  .row input[type=text].grow { flex: 1; min-width: 220px; }
+  select {
+    background: #0d1117; color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 8px; font-size: 13px;
+  }
+  button {
+    background: var(--accent); color: #fff; border: 0; border-radius: 6px;
+    padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  button.ghost { background: #21262d; }
+  button:disabled { opacity: .5; cursor: default; }
+  button:hover { filter: brightness(1.1); }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .msg { margin-top: 10px; font-size: 13px; white-space: pre-wrap; display: none; }
+  .msg.err { color: var(--err); }
+  .msg.ok { color: var(--ok); }
+  table.info { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table.info td { padding: 3px 8px 3px 0; vertical-align: top; }
+  table.info td:first-child { color: var(--muted); white-space: nowrap; width: 70px; }
+  /* 任务 */
+  .task { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-top: 10px; }
+  .task .head { display: flex; align-items: center; gap: 8px; }
+  .task .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .task .kind {
+    font-size: 11px; color: var(--accent); border: 1px solid var(--accent);
+    border-radius: 4px; padding: 0 6px; white-space: nowrap;
+  }
+  .task .status { font-size: 11px; border-radius: 4px; padding: 1px 7px; white-space: nowrap; }
+  .status.running { color: var(--warn); border: 1px solid var(--warn); }
+  .status.ok { color: var(--ok); border: 1px solid var(--ok); }
+  .status.failed { color: var(--err); border: 1px solid var(--err); }
+  .task .head .status { margin-left: auto; }
+  .bar { height: 6px; background: #0d1117; border-radius: 3px; margin: 8px 0 6px; overflow: hidden; }
+  .bar > div { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+  .bar.indet > div { width: 40% !important; animation: slide 1.2s infinite linear; }
+  @keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
+  .log {
+    font: 12px/1.5 var(--mono); color: var(--muted); background: #0d1117;
+    border-radius: 6px; padding: 8px 10px; margin-top: 6px;
+    max-height: 140px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;
+  }
+  .qrimg { width: 180px; height: 180px; border-radius: 8px; margin-top: 8px; background: #fff; }
+  footer { color: var(--muted); font-size: 12px; margin-top: 28px; text-align: center; }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📦 vidporter · 视频搬运工</h1>
+    <span class="ver" id="ver"></span>
+    <span class="env" id="env"></span>
+  </header>
+
+  <div class="card">
+    <h2>新建下载</h2>
+    <textarea id="urls" placeholder="每行一个链接&#10;支持：B站 / 抖音 / 快手 / 小红书 / YouTube 等 1800+ 站点&#10;示例：https://www.bilibili.com/video/BV1xx411c7mD"></textarea>
+    <div class="row">
+      <label>输出目录 <input type="text" id="out_dir" class="grow"></label>
+      <label>清晰度
+        <select id="quality">
+          <option value="">最佳</option>
+          <option value="2160">4K</option><option value="1080">1080p</option>
+          <option value="720">720p</option><option value="480">480p</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="audio_only"> 仅音频</label>
+      <label><input type="checkbox" id="subtitles"> 同时下载字幕</label>
+    </div>
+    <div class="row">
+      <button id="btn_preview">解析预览</button>
+      <button id="btn_download">开始下载</button>
+    </div>
+    <div class="msg" id="preview_msg"></div>
+    <div id="info_box" style="margin-top:12px"></div>
+    <div class="hint">下载视频封装与「仅音频」需要 ffmpeg；B站高清/AI字幕建议先在下方扫码登录。</div>
+  </div>
+
+  <div class="card">
+    <h2>任务</h2>
+    <div id="tasks"><div class="hint">暂无任务</div></div>
+  </div>
+
+  <div class="card">
+    <h2>工具</h2>
+    <div class="row">
+      <button id="btn_login" class="ghost">B站扫码登录</button>
+      <span class="hint" style="margin:0">生成 cookie 后，B站下载自动获得高清与 AI 字幕权限</span>
+    </div>
+    <div class="row">
+      <input type="text" id="subs_dir" class="grow" placeholder="SRT 字幕目录，如 D:/bilibili-tools/workspace/subs">
+      <button id="btn_convert" class="ghost">转 Markdown 逐字稿</button>
+    </div>
+    <div class="msg" id="tool_msg"></div>
+  </div>
+
+  <footer>
+    仅供个人学习与备份使用，请遵守平台条款、尊重创作者版权 ·
+    <a href="https://github.com/yourname/vidporter" target="_blank">GitHub</a>
+  </footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+async function api(path, body) {
+  const resp = await fetch(path, body === undefined ? undefined : {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data.error || ("HTTP " + resp.status));
+  return data;
+}
+
+// ---- 初始化 ----
+(async () => {
+  try {
+    const v = await api("/api/version");
+    $("ver").textContent = "v" + v.version;
+    $("env").textContent =
+      `Python ${v.python} · ffmpeg ${v.ffmpeg ? "✓" : "✗ 未安装（音频/内嵌字幕不可用）"}`;
+    if (!v.ffmpeg) $("env").innerHTML = `Python ${v.python} · <b class="bad">ffmpeg 未安装（仅音频不可用）</b>`;
+    $("out_dir").value = v.out_dir;
+  } catch (e) { $("ver").textContent = "加载失败"; }
+})();
+
+// ---- 解析预览 ----
+$("btn_preview").onclick = async () => {
+  const url = $("urls").value.trim().split("\n")[0];
+  const msg = $("preview_msg");
+  if (!url) return showMsg(msg, "请先填入链接", true);
+  msg.style.display = "block"; msg.className = "msg"; msg.textContent = "解析中…";
+  $("btn_preview").disabled = true;
+  try {
+    const info = await api("/api/info", {url});
+    $("info_box").innerHTML = `
+      <table class="info">
+        <tr><td>平台</td><td>${esc(info.platform)}${info.media_type === "images" ? "（图集 " + info.images + " 张）" : ""}</td></tr>
+        <tr><td>标题</td><td>${esc(info.title)}</td></tr>
+        ${info.uploader ? `<tr><td>作者</td><td>${esc(info.uploader)}</td></tr>` : ""}
+        ${info.duration ? `<tr><td>时长</td><td>${Math.floor(info.duration / 60)}:${String(Math.floor(info.duration % 60)).padStart(2, "0")}</td></tr>` : ""}
+        ${info.qualities.length ? `<tr><td>清晰度</td><td>${info.qualities.map(h => h + "p").join(" / ")}</td></tr>` : ""}
+        ${info.subtitles.length ? `<tr><td>字幕</td><td>${esc(info.subtitles.join(", "))}</td></tr>` : ""}
+      </table>`;
+    msg.textContent = "解析成功";
+  } catch (e) {
+    $("info_box").innerHTML = "";
+    showMsg(msg, "解析失败：" + e.message, true);
+  } finally { $("btn_preview").disabled = false; }
+};
+
+// ---- 下载 ----
+$("btn_download").onclick = async () => {
+  const urls = $("urls").value.trim().split("\n").map(s => s.trim()).filter(Boolean);
+  if (!urls.length) return;
+  $("btn_download").disabled = true;
+  try {
+    await api("/api/download", {
+      urls,
+      out_dir: $("out_dir").value.trim(),
+      quality: $("quality").value || null,
+      audio_only: $("audio_only").checked,
+      subtitles: $("subtitles").checked,
+    });
+    $("urls").value = "";
+  } catch (e) { alert("提交失败：" + e.message); }
+  finally { $("btn_download").disabled = false; }
+};
+
+// ---- 工具 ----
+$("btn_login").onclick = async () => {
+  try { await api("/api/login/bilibili", {}); }
+  catch (e) { showMsg($("tool_msg"), "发起失败：" + e.message, true); }
+};
+$("btn_convert").onclick = async () => {
+  const dir = $("subs_dir").value.trim();
+  const msg = $("tool_msg");
+  if (!dir) return showMsg(msg, "请填写字幕目录", true);
+  try {
+    await api("/api/convert", {subs_dir: dir});
+    msg.style.display = "none";
+  } catch (e) { showMsg(msg, "提交失败：" + e.message, true); }
+};
+
+function showMsg(el, text, isErr) {
+  el.style.display = "block";
+  el.className = "msg " + (isErr ? "err" : "ok");
+  el.textContent = text;
+}
+
+// ---- 任务轮询 ----
+const KIND = {download: "下载", login: "登录", convert: "转换", info: "解析"};
+let rendered = "";
+async function poll() {
+  try {
+    const data = await api("/api/tasks");
+    if (!data.tasks.length) { $("tasks").innerHTML = '<div class="hint">暂无任务</div>'; return; }
+    const html = data.tasks.map(t => {
+      let pct = 0, indet = !t.progress_total;
+      if (t.progress_total) pct = Math.min(100, t.progress_done / t.progress_total * 100);
+      const pctText = t.progress_total
+        ? (pct.toFixed(1) + "% · " + fmtMB(t.progress_done) + " / " + fmtMB(t.progress_total))
+        : (t.status === "running" ? "进行中…" : fmtMB(t.progress_done));
+      const qr = t.qr_base64 && t.status === "running"
+        ? `<img class="qrimg" src="${t.qr_base64}" alt="二维码">` : "";
+      return `
+      <div class="task">
+        <div class="head">
+          <span class="kind">${KIND[t.kind] || t.kind}</span>
+          <span class="title" title="${esc(t.title)}">${esc(t.title)}</span>
+          <span class="status ${t.status}">${t.status === "running" ? "运行中" : t.status === "ok" ? "完成" : "失败"}</span>
+        </div>
+        <div class="bar ${indet && t.status === "running" ? "indet" : ""}"><div style="width:${pct}%"></div></div>
+        <div class="hint">${esc(pctText)}</div>
+        ${qr}
+        ${t.log.length ? `<div class="log">${esc(t.log.join("\n"))}</div>` : ""}
+      </div>`;
+    }).join("");
+    if (html !== rendered) { $("tasks").innerHTML = html; rendered = html; }
+  } catch (e) { /* 服务器未就绪时静默 */ }
+}
+function fmtMB(n) {
+  if (!n && n !== 0) return "-";
+  return n > 1048576 ? (n / 1048576).toFixed(1) + "MB" : Math.round(n / 1024) + "KB";
+}
+setInterval(poll, 1000);
+poll();
+</script>
+</body>
+</html>

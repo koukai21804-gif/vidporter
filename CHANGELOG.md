@@ -2,6 +2,19 @@
 
 本项目的版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [0.2.0] - 2026-10-01
+
+### 新增
+
+- **网页图形界面**：`vidporter ui` 启动本地控制台（仅监听 127.0.0.1），
+  支持链接批量下载（实时进度条与日志）、解析预览、B站扫码登录
+  （二维码显示在页面上）、SRT → Markdown 逐字稿转换
+- **单文件可执行程序**：PyInstaller 打包配置（`vidporter.spec`），
+  `pyinstaller vidporter.spec` 产出约 20MB 的 `vidporter-gui.exe`，
+  免 Python 环境双击即用；新增 `build` 可选依赖组
+- 新增 `src/vidporter/web/`（任务管理器 + 标准 HTTP 服务端）与
+  `gui_main.py`（打包入口）；8 个离线测试覆盖任务管理与 API
+
 ## [0.1.0] - 2026-09-28
 
 首个公开版本。

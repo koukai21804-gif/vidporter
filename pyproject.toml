@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vidporter"
-version = "0.1.0"
+version = "0.2.0"
 description = "统一的多平台视频提取工具：B站 / 抖音 / 快手 / 小红书 / 微信视频号 / 1800+ 其它站点"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -51,6 +51,7 @@ dev = [
     "ruff>=0.6",
     "websocket-client>=1.8",
 ]
+build = ["pyinstaller>=6.0"]
 
 [project.scripts]
 vidporter = "vidporter.cli:main"
