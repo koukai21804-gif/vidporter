@@ -34,7 +34,8 @@ proxy = "http://127.0.0.1:7890"
 
 
 def test_build_ydl_opts(tmp_path):
-    cfg = Config()
+    # cookies_dir 指向临时目录，测试不受本机真实 cookie 影响
+    cfg = Config(cookies_dir=tmp_path / "cookies")
     from vidporter.platforms.base import ExtractContext
 
     ctx = ExtractContext(config=cfg)
@@ -52,7 +53,7 @@ def test_build_ydl_opts_audio(tmp_path):
     from vidporter.models import DownloadOptions
     from vidporter.platforms.base import ExtractContext
 
-    ctx = ExtractContext(config=Config())
+    ctx = ExtractContext(config=Config(cookies_dir=tmp_path / "cookies"))
     opts = DownloadOptions(out_dir=tmp_path, audio_only=True, audio_format="mp3")
     ydl = build_ydl_opts(ctx, opts)
     assert ydl["format"] == "bestaudio/best"
