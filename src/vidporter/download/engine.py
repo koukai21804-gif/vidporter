@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from vidporter.config import Config
@@ -65,6 +65,10 @@ class Engine:
             if not allow_fallback or extractor.name == "generic":
                 raise
             log.warning("%s 平台解析失败（%s），回退到 yt-dlp 通用引擎…", extractor.name, e)
+            if opts.cookies_file is None:
+                # 该平台导出过 cookie 时透传给 yt-dlp（抖音等平台无 cookie 必失败）；
+                # replace 复制后修改，避免污染批处理复用的 opts
+                opts = replace(opts, cookies_file=self.ctx.cookies_for(extractor.name))
             return self.registry.generic.download(url, self.ctx, opts)
 
     # -- 批处理 -------------------------------------------------------------

@@ -4,11 +4,17 @@
 请求 iesdouyin 移动分享页 → 解析 ``window._ROUTER_DATA`` 中的作品数据 →
 得到无水印播放地址（playwm → play）。该路径是社区公开的通行做法，
 平台随时可能调整，失败时下载引擎会自动回退到 yt-dlp。
+
+注意：分享页正逐步改为客户端渲染，必须有 ``ttwid`` cookie 才能拿到 SSR
+作品数据；cookie 文件里没有 ttwid 时会自动向字节签发接口申请一个并写回
+（游客级，长期有效），``vidporter cookies export --domain douyin`` 导出的
+其余 cookie（登录态等）也会按请求附带。仍失败时下载引擎自动回退 yt-dlp。
 """
 
 from __future__ import annotations
 
 import re
+import time
 from typing import ClassVar
 
 from vidporter.exceptions import ExtractionError, UnsupportedURLError
@@ -21,6 +27,19 @@ log = get_logger("vidporter.platforms.douyin")
 
 _ID_RE = re.compile(r"/(?:video|note|slidelayout)/(\d+)")
 _MODAL_ID_RE = re.compile(r"[?&]modal_id=(\d+)")
+
+# 字节系游客 ttwid 签发接口（社区通行做法）：分享页 SSR 数据必须有 ttwid，
+# 而无头浏览器访问 douyin.com 首页只能拿到 __ac_* 验证 cookie，拿不到 ttwid
+_TTWID_REGISTER_URL = "https://ttwid.bytedance.com/ttwid/union/register/"
+_TTWID_BODY = {
+    "region": "cn",
+    "aid": 1768,
+    "needFid": False,
+    "service": "www.ixigua.com",
+    "migrate_info": {"ticket": "", "source": "node"},
+    "cbUrlProtocol": "https",
+    "union": True,
+}
 
 
 class DouyinExtractor(BaseExtractor):
@@ -35,7 +54,7 @@ class DouyinExtractor(BaseExtractor):
         if not item_id:
             raise UnsupportedURLError(f"无法从 URL 中解析出抖音作品 id: {url}")
 
-        item = self._fetch_item(client, item_id, canonical)
+        item = self._fetch_item(client, item_id, canonical, ctx)
         return self._build_info(item, item_id, canonical)
 
     # -- URL 处理 -----------------------------------------------------------
@@ -52,8 +71,18 @@ class DouyinExtractor(BaseExtractor):
 
     # -- 数据获取 -----------------------------------------------------------
 
-    def _fetch_item(self, client, item_id: str, canonical_url: str) -> dict:
+    def _fetch_item(
+        self, client, item_id: str, canonical_url: str, ctx: ExtractContext
+    ) -> dict:
         share_url = f"https://www.iesdouyin.com/share/video/{item_id}/"
+        cookies = self._request_cookies(ctx) or {}
+        if "ttwid" not in cookies:
+            ttwid = self._mint_ttwid(client)
+            if ttwid:
+                cookies["ttwid"] = ttwid
+                self._persist_ttwid(ctx, ttwid)
+        if cookies:
+            client.cookies.update(cookies)
         try:
             resp = client.get(share_url)
             resp.raise_for_status()
@@ -65,20 +94,74 @@ class DouyinExtractor(BaseExtractor):
         except ExtractionError:
             raise ExtractionError(
                 "分享页中没有作品数据（可能需要登录 cookie 或页面已改版）；"
-                "请尝试 vidporter cookies export 导出抖音 cookie 后重试"
+                "可尝试 vidporter cookies export --domain douyin 导出 cookie 后重试"
             ) from None
 
         item = self._find_item(router_data, item_id)
         if not item:
-            raise ExtractionError("作品数据为空，作品可能已删除或私密")
+            # 分享页已是客户端渲染壳时同样走这里（loaderData 只有占位键）
+            raise ExtractionError(
+                "分享页中没有作品数据：作品可能已删除或私密，也可能被风控拦截；"
+                "可尝试 vidporter cookies export --domain douyin 导出 cookie 后重试"
+            )
         return item
 
     @staticmethod
+    def _request_cookies(ctx: ExtractContext) -> dict[str, str] | None:
+        """导出的抖音 cookie 存在时按请求附带（ttwid 等是拿到 SSR 数据的关键）。"""
+        cookie_path = ctx.cookies_for("douyin")
+        if not cookie_path:
+            return None
+        from vidporter.cookies import netscape
+
+        cookies = netscape.cookies_for_domain(cookie_path, "douyin")
+        return {c.name: c.value for c in cookies} or None
+
+    @staticmethod
+    def _mint_ttwid(client) -> str | None:
+        """向字节签发接口申请游客 ttwid；失败返回 None（回退 yt-dlp 兜底）。"""
+        try:
+            resp = client.post(_TTWID_REGISTER_URL, json=_TTWID_BODY)
+            resp.raise_for_status()
+            ttwid = resp.cookies.get("ttwid")
+            if ttwid:
+                log.debug("已申请游客 ttwid")
+            return ttwid
+        except Exception as e:
+            log.warning("申请 ttwid 失败: %s", e)
+            return None
+
+    @staticmethod
+    def _persist_ttwid(ctx: ExtractContext, ttwid: str) -> None:
+        """把游客 ttwid 写回 cookie 文件（一次申请长期有效），yt-dlp 兜底也能用。"""
+        from vidporter.cookies import netscape
+
+        path = ctx.config.cookie_file_for("douyin")
+        existing = netscape.load_file(path) if path.is_file() else []
+        keep = [c for c in existing if c.name != "ttwid"]
+        keep.append(
+            netscape.Cookie(
+                name="ttwid",
+                value=ttwid,
+                domain=".douyin.com",
+                expires=int(time.time()) + 365 * 86400,
+            )
+        )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        netscape.write_netscape(path, keep)
+        log.debug("游客 ttwid 已缓存 → %s", path)
+
+    @staticmethod
     def _find_item(router_data: dict, item_id: str) -> dict | None:
-        loader = router_data.get("loaderData", {})
+        loader = router_data.get("loaderData")
+        if not isinstance(loader, dict):
+            return None
         for page in loader.values():
+            if not isinstance(page, dict):
+                # loaderData 里 video_layout 等占位键恒为 null
+                continue
             info_res = page.get("videoInfoRes") or page.get("noteInfoRes") or {}
-            item_list = info_res.get("item_list", [])
+            item_list = info_res.get("item_list") or []
             if item_list:
                 # 分享页只承载一个作品
                 return item_list[0]
