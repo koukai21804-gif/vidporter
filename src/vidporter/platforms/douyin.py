@@ -71,9 +71,7 @@ class DouyinExtractor(BaseExtractor):
 
     # -- 数据获取 -----------------------------------------------------------
 
-    def _fetch_item(
-        self, client, item_id: str, canonical_url: str, ctx: ExtractContext
-    ) -> dict:
+    def _fetch_item(self, client, item_id: str, canonical_url: str, ctx: ExtractContext) -> dict:
         share_url = f"https://www.iesdouyin.com/share/video/{item_id}/"
         cookies = self._request_cookies(ctx) or {}
         if "ttwid" not in cookies:
