@@ -2,6 +2,29 @@
 
 本项目的版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [0.2.1] - 2026-10-01
+
+### 修复
+
+- **抖音**：分享页改版（`loaderData` 恒含 `video_layout: null` 占位键）导致
+  `AttributeError: 'NoneType' object has no attribute 'get'`，且裸异常绕过
+  yt-dlp 回退机制；现在安全跳过空占位键，失败转为可触发回退的干净错误
+- **抖音**：分享页改为客户端渲染后，无 `ttwid` cookie 只能拿到空壳页面；
+  现在自动向字节签发接口申请游客 ttwid 并写回 cookie 文件——零配置即可
+  解析下载（实测含图集在内的短链与直达链接）
+- **抖音**：导出的抖音 cookie 之前从未被请求携带；现在自研解析与 yt-dlp
+  回退均会附带（引擎兜底时透传失败平台的 cookie，且不污染批处理复用的
+  下载选项）
+- **cookie 导出**：Chromium 136+ 禁止在默认用户目录上开调试端口，导致
+  「调试端口 9222 未就绪: timed out」；改用 vidporter 专属持久化 profile，
+  并补 `--remote-allow-origins` 修复 CDP WebSocket 握手 403；无头模式会先
+  访问目标站点获取游客 cookie；新增 `--show` 有头模式（专用 profile 保留
+  登录态）
+
+### 新增
+
+- 应用图标（exe 资源 + 网页 favicon）；`build` 依赖组加入 pillow
+
 ## [0.2.0] - 2026-10-01
 
 ### 新增

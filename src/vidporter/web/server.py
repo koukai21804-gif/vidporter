@@ -226,6 +226,8 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?", 1)[0]
         if path in ("/", "/index.html"):
             self._send_file(STATIC_DIR / "index.html")
+        elif path == "/favicon.png":
+            self._send_file(STATIC_DIR / "favicon.png")
         elif path == "/api/version":
             self._send_json(api_version())
         elif path == "/api/tasks":
