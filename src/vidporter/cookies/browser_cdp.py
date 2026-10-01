@@ -5,6 +5,12 @@
 而浏览器自己能拿到明文——以调试模式启动浏览器，用 CDP 的
 ``Network.getAllCookies`` 即可取到包括 HttpOnly（SESSDATA 等）在内的全部 cookie。
 
+注意：Chromium 136 起（2025-04，Edge 同步跟进），``--remote-debugging-port``
+在**默认用户数据目录**上会被静默忽略（防 debugger 滥用的安全加固），因此
+这里使用 vidporter 专属 profile（持久化，登录状态跨次保留）；profile 初始
+为空，需先导航到目标站点获取游客 cookie（如抖音 ttwid）。需要登录态时用
+``--show`` 以有头模式跑一次并在窗口里登录。
+
 只在需要时导入 websocket-client：``pip install "vidporter[cdp]"``。
 """
 
@@ -14,6 +20,7 @@ import contextlib
 import json
 import shutil
 import subprocess
+import sys
 import time
 import urllib.request
 from pathlib import Path
@@ -60,11 +67,21 @@ def find_browser_executable(browser: str, explicit: Path | None = None) -> Path:
     raise FileNotFoundError(f"未找到 {browser}，请用 --browser-path 指定可执行文件路径")
 
 
-def _default_user_data_dir(browser: str) -> Path:
+def _cdp_profile_dir() -> Path:
+    """CDP 导出专用 profile：独立于用户默认目录（Chromium 136+ 要求），且持久化。"""
     home = Path.home()
-    if browser == "edge":
-        return home / "AppData" / "Local" / "Microsoft" / "Edge" / "User Data"
-    return home / "AppData" / "Local" / "Google" / "Chrome" / "User Data"
+    if sys.platform == "darwin":
+        base = home / "Library" / "Application Support" / "vidporter"
+    elif sys.platform == "win32":
+        base = home / "AppData" / "Local" / "vidporter"
+    else:
+        base = home / ".local" / "share" / "vidporter"
+    return base / "cdp-profile"
+
+
+def auto_navigate_url(domain_filter: str) -> str:
+    """根据域名过滤器推导首次导航地址：游客 cookie 由目标站服务端下发。"""
+    return f"https://www.{domain_filter}.com" if domain_filter else "about:blank"
 
 
 class _CDPClient:
@@ -77,7 +94,7 @@ class _CDPClient:
             raise MissingDependencyError(
                 "CDP 导出需要 websocket-client：pip install 'vidporter[cdp]'"
             ) from e
-        self._ws = websocket.create_connection(ws_url, timeout=timeout)
+        self._ws = websocket.create_connection(ws_url, timeout=timeout, suppress_origin=True)
         self._next_id = 0
 
     def call(self, method: str, params: dict | None = None) -> dict:
@@ -106,25 +123,33 @@ def export_cookies(
     domain_filter: str = "",
     port: int = DEBUG_PORT,
     headless: bool = True,
-    navigate_url: str = "about:blank",
+    navigate_url: str | None = None,
     settle_seconds: float = 2.0,
 ) -> int:
     """导出浏览器 cookie 到 Netscape 文件，返回写入条数。
 
+    使用 vidporter 专属 profile（Chromium 136+ 不允许在默认用户目录上开
+    调试端口）；该 profile 初始无 cookie，``navigate_url`` 缺省时按
+    ``domain_filter`` 先访问目标站点获取游客 cookie（ttwid 等）。
+
     ``domain_filter`` 非空时只保留包含该子串的域（如 ``bilibili``）。
     """
     exe = find_browser_executable(browser, browser_path)
-    user_data = _default_user_data_dir(browser)
+    if navigate_url is None:
+        navigate_url = auto_navigate_url(domain_filter)
+    profile = _cdp_profile_dir()
+    profile.mkdir(parents=True, exist_ok=True)
 
     flags = [
         str(exe),
         f"--remote-debugging-port={port}",
-        f"--user-data-dir={user_data}",
+        # Chromium 111+ 拒绝带 Origin 头的 CDP WebSocket 连接（403）
+        "--remote-allow-origins=*",
+        f"--user-data-dir={profile}",
         "--no-first-run",
         "--no-default-browser-check",
         "--disable-popup-blocking",
         "--disable-features=Translate",
-        "--restore-last-session=false",
         navigate_url,
     ]
     if headless:
@@ -158,7 +183,9 @@ def export_cookies(
     if domain_filter:
         cookies = netscape.filter_by_domain(cookies, domain_filter)
     if not cookies:
-        raise RuntimeError("没有取到 cookie——若浏览器已占用该 profile，请先关闭所有窗口后重试")
+        raise RuntimeError(
+            "没有取到 cookie——请检查本机能否访问目标站点，或网络是否被代理/防火墙拦截"
+        )
     return netscape.write_netscape(output, cookies)
 
 

@@ -287,9 +287,16 @@ def cookies_export(
     browser_path: Path | None = typer.Option(None, "--browser-path", help="浏览器可执行文件路径"),
     domain: str = typer.Option("", "--domain", "-d", help="只保留包含该子串的域名，如 bilibili"),
     out: Path | None = typer.Option(None, "--out", "-o", help="输出文件"),
+    show: bool = typer.Option(
+        False, "--show", help="有头模式运行（专用 profile 可在窗口中登录，登录态会保留）"
+    ),
     config_file: Path | None = typer.Option(None, "--config", help="配置文件路径"),
 ) -> None:
-    """以调试模式启动本机浏览器，经 CDP 导出 cookie（含 HttpOnly）。"""
+    """以调试模式启动本机浏览器（专用 profile），经 CDP 导出 cookie（含 HttpOnly）。
+
+    无头模式下会先访问目标站点获取游客 cookie（如抖音 ttwid）；
+    需要登录态时加 --show 在弹出的窗口中登录后再导出。
+    """
     from vidporter.cookies.browser_cdp import export_cookies
 
     config = _load_config(config_file)
@@ -297,7 +304,11 @@ def cookies_export(
     console.print(f"正在从 {browser} 导出 cookie（期间请勿操作浏览器）…")
     try:
         count = export_cookies(
-            output, browser=browser, browser_path=browser_path, domain_filter=domain
+            output,
+            browser=browser,
+            browser_path=browser_path,
+            domain_filter=domain,
+            headless=not show,
         )
     except (VidporterError, FileNotFoundError, RuntimeError) as e:
         console.print(f"[red]导出失败：{e}[/red]")

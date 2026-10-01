@@ -159,3 +159,10 @@ def test_http_downloader_ignores_unsupported_range(tmp_path):
     client = httpx.Client(transport=httpx.MockTransport(handler))
     download_file(client, "https://cdn.example.com/v.mp4", dest)
     assert dest.read_bytes() == data
+
+
+def test_auto_navigate_url():
+    from vidporter.cookies.browser_cdp import auto_navigate_url
+
+    assert auto_navigate_url("douyin") == "https://www.douyin.com"
+    assert auto_navigate_url("") == "about:blank"
