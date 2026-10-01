@@ -48,22 +48,45 @@ CLI · Local Web Console · Single-file executable
 
 ## Installation
 
+> This project is **not on PyPI yet** — install from source for now; this note will be updated once a PyPI release lands.
+
 ```bash
-# Recommended: isolated install via pipx / uv
-pipx install vidporter
-
-# or
-pip install vidporter
-
-# from source
+# 1. Clone anywhere (example: D:\projects — every step below happens in that folder)
 git clone https://github.com/koukai21804-gif/vidporter.git
-cd vidporter
+cd vidporter              # ★ run all install/build commands from the repo root
+
+# 2. Create and activate a virtual environment (optional but recommended)
+python -m venv .venv
+.venv\Scripts\activate            # Windows CMD / PowerShell
+source .venv/Scripts/activate     # Windows Git Bash
+source .venv/bin/activate         # macOS / Linux
+
+# 3. Install (includes dev/test dependencies)
 pip install -e ".[dev]"
+
+# 4. Verify
+vidporter --help
 ```
 
 Muxing videos and extracting audio require [ffmpeg](https://ffmpeg.org) on your `PATH`.
 
+### Which folder do I run commands from?
+
+| Task | Where |
+|---|---|
+| `git clone` / `pip install` / `pyinstaller` and other install/build commands | **repo root** (the folder containing `vidporter.spec`) |
+| `vidporter download / info / ui / batch / cookies ...` | **any folder** — once installed, `vidporter` is on your PATH; no need to go back to the repo |
+| standalone exe | the build output is a self-contained file — **copy it anywhere and double-click** (e.g. desktop) |
+
+**Where do files land?** Downloads default to a `downloads/` folder **inside the
+directory you run the command from**; override with `--out D:/myvideos` or set
+`out_dir` in the config file. Config and cookies always live in your user
+profile (Windows: `%APPDATA%\vidporter`), regardless of where you run commands
+or where the exe sits.
+
 ## Quick Start
+
+> All commands below work from **any folder** (after completing the installation above).
 
 ```bash
 # Auto-detects the platform and downloads
@@ -89,12 +112,23 @@ vidporter ui
 
 ### Graphical Interface (web console / standalone exe)
 
-```bash
-# Option 1: start from any installed environment, browser opens automatically
-vidporter ui [--port 8765] [--no-browser]
+Two options:
 
-# Option 2: build a single-file exe with PyInstaller — double-click to run, no Python needed
-pyinstaller vidporter.spec --noconfirm     # produces dist/vidporter-gui.exe (~20MB)
+**Option 1: web console** — after installation, run from **any folder**; the browser opens automatically:
+
+```bash
+vidporter ui             # default http://127.0.0.1:8765; --port 8765 changes it; --no-browser keeps it closed
+```
+
+**Option 2: standalone single-file exe** — no Python needed, easy to share:
+
+```bash
+# 1. Build: must run from the repo root (that's where vidporter.spec lives)
+cd vidporter
+pyinstaller vidporter.spec --noconfirm
+
+# 2. Output: dist\vidporter-gui.exe (~20MB, with app icon)
+# 3. Use: it's a self-contained file — copy it to your desktop or anywhere and double-click
 ```
 
 The web console supports pasting multiple links for batch download (live progress bars

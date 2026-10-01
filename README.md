@@ -46,22 +46,44 @@
 
 ## 安装
 
+> 本项目**暂未发布到 PyPI**，请先用源码方式安装；PyPI 版本发布后此处会更新。
+
 ```bash
-# 推荐：pipx / uv 隔离安装
-pipx install vidporter
-
-# 或
-pip install vidporter
-
-# 开发版
+# 1. 克隆到任意位置（示例放在 D:\projects，其余步骤都在这个文件夹里进行）
 git clone https://github.com/koukai21804-gif/vidporter.git
-cd vidporter
+cd vidporter              # ★ 安装与打包命令都在仓库根目录执行
+
+# 2. 建立并激活虚拟环境（可选但推荐）
+python -m venv .venv
+.venv\Scripts\activate            # Windows CMD / PowerShell
+source .venv/Scripts/activate     # Windows Git Bash
+source .venv/bin/activate         # macOS / Linux
+
+# 3. 安装（含开发/测试依赖）
 pip install -e ".[dev]"
+
+# 4. 验证
+vidporter --help
 ```
 
 下载视频封装、转音频需要系统安装 [ffmpeg](https://ffmpeg.org) 并加入 `PATH`。
 
+### 在哪个文件夹输命令？
+
+| 操作 | 在哪执行 |
+|---|---|
+| `git clone` / `pip install` / `pyinstaller` 等安装打包命令 | **仓库根目录**（`vidporter.spec` 所在层） |
+| `vidporter download / info / ui / batch / cookies ...` | **任意文件夹**——安装后 `vidporter` 已在 PATH 中，不必回到仓库目录 |
+| 免安装 exe | 构建产物是独立文件，**放到任意位置双击即可**（如桌面） |
+
+**文件落在哪**：下载默认保存到「执行命令时所在目录」下的 `downloads/`；
+用 `--out D:/myvideos` 指定，或在配置文件里固定 `out_dir`。配置与 cookie
+统一存放在用户目录（Windows：`%APPDATA%\vidporter`），与命令执行位置、
+exe 放置位置无关。
+
 ## 快速上手
+
+> 以下命令在**任意文件夹**都可执行（前提：完成上面的安装）。
 
 ```bash
 # 自动识别平台并下载（视频）
@@ -89,12 +111,21 @@ vidporter ui
 
 不想敲命令？两种方式：
 
-```bash
-# 方式一：任意已安装环境直接启动，自动打开浏览器
-vidporter ui [--port 8765] [--no-browser]
+**方式一：网页控制台** —— 安装完成后在**任意文件夹**执行，自动打开浏览器：
 
-# 方式二：PyInstaller 打包的单文件 exe，双击即用（无需 Python 环境）
-pyinstaller vidporter.spec --noconfirm     # 产出 dist/vidporter-gui.exe（约 20MB）
+```bash
+vidporter ui             # 默认 http://127.0.0.1:8765；--port 8765 换端口；--no-browser 不自动开浏览器
+```
+
+**方式二：免安装单文件 exe** —— 无需 Python 环境，适合拷给其他人用：
+
+```bash
+# 1. 构建：必须在仓库根目录执行（vidporter.spec 在那里）
+cd vidporter
+pyinstaller vidporter.spec --noconfirm
+
+# 2. 产物：dist\vidporter-gui.exe（约 20MB，含应用图标）
+# 3. 使用：独立文件，复制到桌面或任何位置双击即可运行
 ```
 
 网页控制台功能：粘贴链接批量下载（实时进度条与日志）、解析预览、
